@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fibonacci - Aaron</title>
+  <style>
+    body {
+      background-color: #888;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(50, 1fr);
+      grid-template-rows: repeat(50, 1fr);
+      gap: 1px;
+      background-color: #888;
+    }
+
+    .cell {
+      font-size: 14px;
+      background-color: #eee;
+      border: 1px solid #888;
+      border-radius: 3px;
+      min-height: 16px;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    .cell:hover {
+      background-color: #fff;
+      border: 1px solid #fff;
+    }
+
+    .cell.yellow {
+      background-color: yellow;
+    }
+
+    .cell.green {
+      background-color: green;
+    }
+    .footer {
+      margin-top: 2em;
+      color: #222
+    }
+  </style>
+</head>
+<body>
+  <div class="grid">
+    <!-- Generate the cells using JavaScript -->
+  </div>
+  <div class="footer">Written by Aaron (aaronbooth71@gmail.com)</div>
+
+  <script>
+    const gridSize = 50;
+
+    /*
+     * UI MANAGEMENT
+     */
+
+    // Create the grid
+    const gridDiv = document.querySelector('.grid');
+    for (let i = 0; i < gridSize; i++) {
+      for (let j = 0; j < gridSize; j++) {
+        const cell = document.createElement('div');
+        cell.id = `${i}-${j}`;
+        cell.classList.add('cell');
+        cell.innerText = 0;
+        gridDiv.appendChild(cell);
+      }
+    }
+
+    // Add event listener to each cell
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach(cell => {
+      cell.addEventListener('click', cellClick);
+    });
+      
+    function cellClick(event) {
+      const cell = event.target;
+      const [row, col] = cell.id.split('-').map(Number);
+      updateCoord(row, col);
+    }
+
+    function cellChange(row, col, value) {
+      const cell = document.getElementById(`${row}-${col}`);
+      cell.innerText = value;
+      if (value > 0) {
+        cell.classList.add('yellow');
+        setTimeout(() => {
+            cell.classList.remove('yellow');
+          }, 500);
+      } else {
+        cell.classList.add('green');
+        setTimeout(() => {
+            cell.classList.remove('green');
+          }, 1000);
+      }
+    }
+
+    /**
+     * COORD MANAGEMENT 
+     */
+
+    function createGrid(rows, columns) {
+      const grid = [];
+      for (let i = 0; i < rows; i++) {
+          for (let j = 0; j < columns; j++) {
+              grid.push(0);
+          }
+      }
+      return grid;
+    }
+
+    const grid = createGrid(gridSize, gridSize);
+
+    function updateCoord(row, col) {
+        const cIndex = row * gridSize + col;
+        // Can process row and col same loop due to symmetry
+        for (let i = 0; i < gridSize; i++) {
+          const rowIndex = row * gridSize + i;
+          const colIndex = i * gridSize + col;
+          // Increase the value
+          grid[rowIndex] += 1;
+          cellChange(row, i, grid[rowIndex]);
+          // Ensure central cell not updated twice
+          if (colIndex !== cIndex) { 
+            grid[colIndex] += 1;
+            cellChange(i, col, grid[colIndex]);
+          }
+        }
+        checkFibonacci();
+    }
+
+    function checkFibonacci() {
+        // Check for consecutive Fibonacci numbers
+        // Again can process row and col same time
+        let rowSeq = [];
+        let colSeq = [];
+
+        for (let i = 0; i < gridSize; i++) {
+          rowSeq = [];
+          colSeq = [];
+          for (let j = 0; j < gridSize; j++) {
+            // Can fast calc sequence validity?
+            fibonacciLine(rowSeq, i, j);
+            fibonacciLine(colSeq, j, i);
+          }
+        }
+    }
+
+    function fibonacciLine(seq, row, col) {
+      const index = row * gridSize + col;
+      if (seq.length > 1) {
+              if ((seq[seq.length-1].value + seq[seq.length-2].value) === grid[index]) {
+                seq.push({ row: row, col: col, seq: null, value: grid[index]});
+              } else {
+                if (seq.length > 4) {
+                  let debug = "";
+                  // We have at least 5 consecutive
+                  seq.forEach(seqElem => {
+                    // Clear
+                    debug += seqElem.row + ":" + seqElem.col + ":" + seqElem.value + ", ";
+                    grid[seqElem.row * gridSize + seqElem.col] = 0;
+                    cellChange(seqElem.row, seqElem.col, 0);
+                  });
+                  console.log(debug);
+                }
+                seq.length = 0;
+              }
+            } else {
+              if (grid[index] < 2) {
+                seq.push({ row: row, col: col, seq: 2, value: grid[index]});
+                if ((seq.length == 2) && (grid[index] === 0)) {
+                  seq.shift();
+                } 
+              } else {
+                // We need more expensive operations
+                const seqIndex = getFibonacciIndex(grid[index]);
+                if (seqIndex) {
+                  seq.push({ row: row, col: col, seq: seqIndex, value: grid[index]});
+                  if (seq.length == 2) {
+                    if (seq[0].seq - seq[1].seq !== 1) {
+                      seq.shift();
+                    }
+                  }
+                } else {
+                  seq.length = 0;
+                }
+              }
+            }
+    }
+
+    // Check if a Fibonacci number >= 2 and return index
+    function getFibonacciIndex(num) {
+      // if sequence index will be high then we can speed up by
+      // avoiding longer while loop in most cases with equation 
+      if (num > 100000) {
+        if (!isFibonacci(num)) {
+          return 0;
+        }
+      }
+      let current = 1;
+      let previous = 0;
+      let index = 1;
+      while (current < num) {
+          const temp = current;
+          current = current + previous;
+          previous = temp;
+          index++;
+      }
+      if (current === num) {
+          return index;
+      } else {
+          return 0; // Number is not in the Fibonacci sequence
+      }
+    }
+
+    // Check if a Fibonacci number
+    // Returns sequence index else false
+    function isFibonacci(num) {
+        const sqrt5 = Math.sqrt(5);
+        const phi = (1 + sqrt5) / 2;
+        const sequence = (Math.pow(phi, num) - Math.pow(-phi, -num)) / sqrt5;
+        return sequence % 1 === 0;
+    };
+
+  
+  </script>
+</body>
+</html>
